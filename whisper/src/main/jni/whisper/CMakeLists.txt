@@ -3,6 +3,11 @@ cmake_minimum_required(VERSION 3.10)
 project(whisper.cpp)
 
 set(CMAKE_CXX_STANDARD 17)
+
+# Link ggml into libwhisper.so instead of shipping libggml*.so. The llm module bundles its own,
+# newer ggml with the same file names, and two versions can't share one APK.
+set(BUILD_SHARED_LIBS OFF)
+
 set(WHISPER_LIB_DIR ${CMAKE_SOURCE_DIR}/../../../../../third_party/whisper.cpp)
 
 # Path to external GGML, otherwise uses the copy in whisper.cpp.

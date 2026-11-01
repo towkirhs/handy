@@ -1,0 +1,12 @@
+*.iml
+.gradle/
+build/
+local.properties
+.idea/
+.DS_Store
+.cxx/
+captures/
+
+# Fetched by scripts/setup.sh
+third_party/
+app/src/main/assets/models/*.bin

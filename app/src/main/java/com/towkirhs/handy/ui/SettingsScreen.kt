@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -19,6 +20,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,11 +32,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.towkirhs.handy.data.ModelDownloader
 import com.towkirhs.handy.data.Prefs
+
+private const val GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
+private const val GEMINI_MODEL = "gemini-flash-latest"
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val download by ModelDownloader.state.collectAsState()
+    LaunchedEffect(Unit) { ModelDownloader.refresh(context) }
     var llmOn by remember { mutableStateOf(Prefs.llmEnabled) }
     var baseUrl by remember { mutableStateOf(Prefs.llmBaseUrl) }
     var apiKey by remember { mutableStateOf(Prefs.llmApiKey) }
@@ -54,13 +63,14 @@ fun SettingsScreen(onBack: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "Smart cleanup with AI",
+                        "Fix grammar",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        "Optional. Sends only the transcribed text, never audio, to an OpenAI-compatible " +
-                            "service you choose. Off by default. Everything else works offline.",
+                        "Rewrites what you say into properly written text, like Wispr Flow. With an online " +
+                            "key below it uses that service. Without one, or when offline, it uses the " +
+                            "on-device model. Only the transcribed text is ever sent, never audio.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -71,6 +81,29 @@ fun SettingsScreen(onBack: () -> Unit) {
                 })
             }
             if (llmOn) {
+                Text(
+                    "Online service (optional). Pick one, then paste your API key.",
+                    modifier = Modifier.padding(top = 12.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    Modifier.padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(onClick = {
+                        baseUrl = GEMINI_URL
+                        model = GEMINI_MODEL
+                        Prefs.llmBaseUrl = baseUrl
+                        Prefs.llmModel = model
+                    }) { Text("Gemini") }
+                    OutlinedButton(onClick = {
+                        baseUrl = Prefs.DEFAULT_BASE_URL
+                        model = Prefs.DEFAULT_MODEL
+                        Prefs.llmBaseUrl = baseUrl
+                        Prefs.llmModel = model
+                    }) { Text("OpenAI") }
+                }
                 OutlinedTextField(
                     value = baseUrl,
                     onValueChange = { baseUrl = it; Prefs.llmBaseUrl = it },
@@ -99,6 +132,46 @@ fun SettingsScreen(onBack: () -> Unit) {
                         .fillMaxWidth()
                         .padding(top = 8.dp)
                 )
+            }
+        }
+
+        SoftCard {
+            Text(
+                "On-device grammar (offline)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                if (ModelDownloader.supported()) {
+                    "Works with no internet. One-time download, ${ModelDownloader.SIZE_LABEL}. It runs on " +
+                        "your phone's processor, so it is slower than an online service."
+                } else {
+                    "Not available on this phone: it needs a 64-bit ARM processor."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (ModelDownloader.supported()) {
+                Row(
+                    Modifier.padding(top = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    when (val d = download) {
+                        ModelDownloader.State.Missing ->
+                            Button(onClick = { ModelDownloader.start(context) }) { Text("Download") }
+                        is ModelDownloader.State.Downloading ->
+                            Text("Downloading ${d.percent}%", color = MaterialTheme.colorScheme.primary)
+                        ModelDownloader.State.Ready -> {
+                            Text("Ready", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                            TextButton(onClick = { ModelDownloader.delete(context) }) { Text("Delete") }
+                        }
+                        is ModelDownloader.State.Failed -> Column {
+                            Text(d.message, color = MaterialTheme.colorScheme.error)
+                            Button(onClick = { ModelDownloader.start(context) }) { Text("Try again") }
+                        }
+                    }
+                }
             }
         }
 

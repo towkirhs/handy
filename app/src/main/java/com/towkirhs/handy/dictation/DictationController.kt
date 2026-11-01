@@ -7,9 +7,8 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.towkirhs.handy.audio.Recorder
 import com.towkirhs.handy.data.History
-import com.towkirhs.handy.data.Prefs
 import com.towkirhs.handy.stt.Transcriber
-import com.towkirhs.handy.text.LlmCleaner
+import com.towkirhs.handy.text.GrammarFixer
 import com.towkirhs.handy.text.TextCleaner
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -71,9 +70,7 @@ class DictationController(private val context: Context, private val scope: Corou
                 if (text.isEmpty()) {
                     Outcome.NoSpeech
                 } else {
-                    if (Prefs.llmEnabled && Prefs.llmApiKey.isNotBlank()) {
-                        text = LlmCleaner.clean(text) ?: text
-                    }
+                    text = GrammarFixer.fix(context, text)
                     History.add(text)
                     Outcome.Text(text)
                 }

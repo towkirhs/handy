@@ -9,7 +9,10 @@ Inspired by the [Handy](https://github.com/cjpais/Handy) desktop app (Whisper-ba
 - **Floating bar.** A small bubble appears over any app when you tap a text field. Tap it to start and stop, or hold it to talk and release to finish. While listening it expands into a pill with a live waveform, a cancel button and a done button. Drag it anywhere.
 - **On-device speech to text.** [whisper.cpp](https://github.com/ggml-org/whisper.cpp) runs the Whisper `base.en` model, which is bundled inside the APK. Dictation needs no internet.
 - **Clean-up before it's inserted.** Removes filler words (um, uh), stutters ("I I think"), tags like `[BLANK_AUDIO]`, handles "scratch that" and "new line", and fixes spacing and capitals.
-- **Optional AI polish.** In Settings you can point Handy at an OpenAI-compatible endpoint. Only the transcribed text is sent, never audio. Off by default; if it fails, you get the offline result.
+- **Grammar fix, like Wispr Flow.** After cleanup, a language model rewrites the text with correct grammar and punctuation. Two ways, tried in order, and it falls back to the plain cleaned text if neither works:
+  1. **Online:** paste an API key for an OpenAI-compatible service in Settings (Gemini and OpenAI presets included). Only the transcribed text is sent, never audio.
+  2. **On-device:** a small model (Qwen2.5 0.5B Instruct, Apache-2.0) runs on your phone through [llama.cpp](https://github.com/ggml-org/llama.cpp). It's a one-time download of about 400 MB from Settings, then it works with no internet. It's slower than the online option, and a 0.5B model is a modest editor, so it sometimes misses things.
+  Replies that don't look like a corrected version of what you said (an answer to a question, a rewrite far longer or shorter) are discarded.
 - **Voice keyboard.** Handy also ships a small keyboard with the same dictation bar, for places where the floating bar can't appear.
 
 ## Install
@@ -43,6 +46,7 @@ Requires JDK 17 and the Android SDK.
 ## Known limits
 
 - English only for now (`base.en` model). A multilingual model would be a larger APK and slower.
+- On-device grammar needs a 64-bit ARM phone (nearly all current phones).
 - The first dictation after the app starts loads the model, which takes a second or two.
 - Text is inserted by pasting, so your clipboard will hold the last dictation.
 - The floating bar can't appear over password fields, by design.
@@ -51,11 +55,12 @@ Requires JDK 17 and the Android SDK.
 
 ## Credits
 
-The JNI wrapper in `whisper/` is adapted from the Android example in [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (MIT, Georgi Gerganov and contributors). Speech models are OpenAI Whisper converted by the whisper.cpp project.
+The JNI wrapper in `whisper/` is adapted from the Android example in [whisper.cpp](https://github.com/ggml-org/whisper.cpp), and `llm/` from the Android example in [llama.cpp](https://github.com/ggml-org/llama.cpp) (both MIT, Georgi Gerganov and contributors). Speech models are OpenAI Whisper converted by the whisper.cpp project. The grammar model is Qwen2.5 0.5B Instruct by Alibaba Cloud (Apache-2.0).
 
 ## Project layout
 
 - `app/`: the app (Compose UI, overlay service, accessibility service, keyboard, dictation pipeline)
 - `whisper/`: JNI wrapper that builds whisper.cpp with the NDK
+- `llm/`: llama.cpp for on-device grammar fixing, adapted from llama.cpp's Android example
 - `scripts/setup.sh`: fetches whisper.cpp and the model
 - `.github/workflows/build.yml`: CI that tests and builds the APK

@@ -28,8 +28,9 @@ object Prefs {
         get() = prefs.getInt("bar_cy", -1)
         set(value) = prefs.edit { putInt("bar_cy", value) }
 
+    /** Grammar fixing on or off. The online key and the on-device model are both optional; this is the master switch. */
     var llmEnabled: Boolean
-        get() = prefs.getBoolean("llm_enabled", false)
+        get() = prefs.getBoolean("llm_enabled", true)
         set(value) = prefs.edit { putBoolean("llm_enabled", value) }
 
     var llmBaseUrl: String

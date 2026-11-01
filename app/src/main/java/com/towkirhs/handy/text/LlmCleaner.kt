@@ -50,8 +50,7 @@ object LlmCleaner {
                 .getJSONObject(0)
                 .getJSONObject("message")
                 .getString("content")
-                .trim()
-                .ifEmpty { null }
+                .let { ReplyGuard.accept(text, it) }
         } catch (e: Exception) {
             null
         } finally {

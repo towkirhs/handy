@@ -32,6 +32,18 @@ jobs:
       - name: Fetch whisper.cpp and model
         run: ./scripts/setup.sh
 
+      # The on-device grammar model is downloaded by the app at runtime; make sure that link is alive.
+      - name: Check on-device model URL
+        continue-on-error: true
+        run: |
+          URL="https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf"
+          CODE=$(curl -sL -r 0-0 -o /dev/null -w '%{http_code}' "$URL")
+          echo "Model URL answered: $CODE"
+          if [ "$CODE" != "206" ] && [ "$CODE" != "200" ]; then
+            echo "::warning::On-device model URL answered $CODE, so the in-app download may fail."
+            exit 1
+          fi
+
       - name: Prepare signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}

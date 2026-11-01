@@ -14,7 +14,7 @@ Inspired by the [Handy](https://github.com/cjpais/Handy) desktop app (Whisper-ba
 
 ## Install
 
-Every push to `main` builds an APK in GitHub Actions: open the latest run under **Actions** and download the `handy-apk` artifact. Tagging a commit `v*` (for example `v0.1.0`) also attaches `handy.apk` to a GitHub Release.
+Every push to `main` builds the APK in GitHub Actions and publishes it as a GitHub Release (named "Handy build N"). Download `handy.apk` from the latest entry under **Releases**. Tagging a commit `v*` publishes a release with that tag name instead.
 
 The APK is signed with a debug key, so Android will ask you to allow installs from your browser or file manager.
 

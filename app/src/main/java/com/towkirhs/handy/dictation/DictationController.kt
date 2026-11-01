@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.towkirhs.handy.audio.Recorder
 import com.towkirhs.handy.data.History
+import com.towkirhs.handy.data.JarvisBridge
 import com.towkirhs.handy.data.Prefs
 import com.towkirhs.handy.stt.Transcriber
 import com.towkirhs.handy.text.LlmCleaner
@@ -75,6 +76,7 @@ class DictationController(private val context: Context, private val scope: Corou
                         text = LlmCleaner.clean(text) ?: text
                     }
                     History.add(text)
+                    JarvisBridge.send(context, text)
                     Outcome.Text(text)
                 }
             }

@@ -34,6 +34,7 @@ import com.towkirhs.handy.data.Prefs
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    var jarvisOn by remember { mutableStateOf(Prefs.sendToJarvis) }
     var llmOn by remember { mutableStateOf(Prefs.llmEnabled) }
     var baseUrl by remember { mutableStateOf(Prefs.llmBaseUrl) }
     var apiKey by remember { mutableStateOf(Prefs.llmApiKey) }
@@ -99,6 +100,28 @@ fun SettingsScreen(onBack: () -> Unit) {
                         .fillMaxWidth()
                         .padding(top = 8.dp)
                 )
+            }
+        }
+
+        SoftCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Send to Jarvis",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        "Also hands every finished dictation to the Jarvis app on this phone. " +
+                            "Stays on the device. Open Jarvis once after installing it.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(checked = jarvisOn, onCheckedChange = {
+                    jarvisOn = it
+                    Prefs.sendToJarvis = it
+                })
             }
         }
 

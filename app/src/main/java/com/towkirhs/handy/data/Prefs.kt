@@ -28,6 +28,11 @@ object Prefs {
         get() = prefs.getInt("bar_cy", -1)
         set(value) = prefs.edit { putInt("bar_cy", value) }
 
+    /** Also send every finished dictation to the Jarvis app (does nothing if it isn't installed). */
+    var sendToJarvis: Boolean
+        get() = prefs.getBoolean("send_to_jarvis", true)
+        set(value) = prefs.edit { putBoolean("send_to_jarvis", value) }
+
     var llmEnabled: Boolean
         get() = prefs.getBoolean("llm_enabled", false)
         set(value) = prefs.edit { putBoolean("llm_enabled", value) }

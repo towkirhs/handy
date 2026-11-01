@@ -27,6 +27,13 @@ class HandyAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        val source = event?.source
+        if (event?.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED &&
+            source != null && source.isEditable && !source.isPassword
+        ) {
+            FocusState.editable.value = true // the event already names the focused field
+            return
+        }
         updateFocus()
     }
 
@@ -38,10 +45,26 @@ class HandyAccessibilityService : AccessibilityService() {
         return super.onUnbind(intent)
     }
 
-    private fun focusedField(): AccessibilityNodeInfo? =
-        rootInActiveWindow
-            ?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-            ?.takeIf { it.isEditable && !it.isPassword }
+    private fun focusedField(): AccessibilityNodeInfo? {
+        val root = rootInActiveWindow ?: return null
+        val node = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.takeIf { it.isEditable }
+            ?: findEditableFocus(root)
+        return node?.takeIf { !it.isPassword }
+    }
+
+    /** Jetpack Compose fields don't answer findFocus, so walk the screen looking for the focused text field. */
+    private fun findEditableFocus(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        val queue = ArrayDeque<AccessibilityNodeInfo>()
+        queue.add(root)
+        var visited = 0
+        while (queue.isNotEmpty() && visited < MAX_NODES) {
+            val node = queue.removeFirst()
+            visited++
+            if (node.isEditable && node.isFocused) return node
+            for (i in 0 until node.childCount) node.getChild(i)?.let { queue.add(it) }
+        }
+        return null
+    }
 
     private fun updateFocus() {
         FocusState.editable.value = focusedField() != null
@@ -88,6 +111,8 @@ class HandyAccessibilityService : AccessibilityService() {
     }
 
     companion object {
+        private const val MAX_NODES = 400
+
         @Volatile
         private var instance: HandyAccessibilityService? = null
 

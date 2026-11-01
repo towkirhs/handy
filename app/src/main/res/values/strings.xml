@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Handy</string>
+    <string name="keyboard_label">Handy voice keyboard</string>
+    <string name="a11y_description">Lets Handy show its floating bar when you are typing and insert the text you dictate. It only looks at the focused text field to find your cursor.</string>
+</resources>

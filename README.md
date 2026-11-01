@@ -16,6 +16,8 @@ Inspired by the [Handy](https://github.com/cjpais/Handy) desktop app (Whisper-ba
 
 Every push to `main` builds the APK in GitHub Actions and publishes it as a GitHub Release (named "Handy build N"). Download `handy.apk` from the latest entry under **Releases**. Tagging a commit `v*` publishes a release with that tag name instead.
 
+Releases are only published when these repository secrets are set (Settings, Secrets and variables, Actions), so that every build is signed with the same key and installs over the previous one: `KEYSTORE_BASE64` (the keystore file, base64), `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. You can also start a build by hand from the Actions tab with **Run workflow**.
+
 The APK is signed with a debug key, so Android will ask you to allow installs from your browser or file manager.
 
 ## First run

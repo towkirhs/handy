@@ -66,7 +66,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             Text("Jarvis", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "Jarvis bubble: an always-on J bubble. What you say into it goes only to Jarvis.",
+                    "Jarvis bubble: a J bubble next to the dictation bar in text fields. What you say into it goes only to Jarvis.",
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

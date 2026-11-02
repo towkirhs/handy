@@ -41,7 +41,7 @@ import kotlinx.coroutines.launch
 /**
  * Foreground service that owns the floating bar and runs dictation. The bar only shows while a text
  * field is focused (or while a dictation is in progress), and can be dragged anywhere. An optional
- * second "J" bubble is always on screen: what you say into it goes only to the Jarvis app.
+ * second "J" bubble shows at the same times: what you say into it goes only to the Jarvis app.
  */
 class OverlayService : Service(), FlowBarView.Listener {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -135,6 +135,13 @@ class OverlayService : Service(), FlowBarView.Listener {
             }
         }
         scope.launch {
+            combine(FocusState.editable, controller.state, toJarvis) { typing, state, jarvis ->
+                typing || (state != DictationController.State.IDLE && jarvis)
+            }.distinctUntilChanged().collect { show ->
+                jarvisBar?.visibility = if (show) View.VISIBLE else View.GONE
+            }
+        }
+        scope.launch {
             try {
                 Transcriber.warmUp(applicationContext)
             } catch (e: Exception) {
@@ -183,7 +190,10 @@ class OverlayService : Service(), FlowBarView.Listener {
     }
 
     private fun addJarvisBar() {
-        val jb = FlowBarView(this, letter = "J").also { it.contentDescription = "Talk to Jarvis" }
+        val jb = FlowBarView(this, letter = "J").also {
+            it.contentDescription = "Talk to Jarvis"
+            it.visibility = View.GONE
+        }
         jb.listener = object : FlowBarView.Listener {
             override fun onStartRequested() {
                 if (!JarvisBridge.installed(this@OverlayService)) {

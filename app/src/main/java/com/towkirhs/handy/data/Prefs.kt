@@ -28,7 +28,7 @@ object Prefs {
         get() = prefs.getInt("bar_cy", -1)
         set(value) = prefs.edit { putInt("bar_cy", value) }
 
-    /** Show the always-on Jarvis bubble next to the dictation bar. */
+    /** Show the Jarvis bubble next to the dictation bar. */
     var jarvisButton: Boolean
         get() = prefs.getBoolean("jarvis_button", true)
         set(value) = prefs.edit { putBoolean("jarvis_button", value) }

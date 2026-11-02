@@ -9,6 +9,11 @@
     <!-- Only used by the optional AI cleanup. Dictation itself never touches the network. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Lets Handy see and message the Jarvis app (Android 11+ hides other apps otherwise). -->
+    <queries>
+        <package android:name="com.towkirhs.jarcis" />
+    </queries>
+
     <application
         android:name=".HandyApplication"
         android:allowBackup="false"

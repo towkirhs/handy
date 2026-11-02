@@ -24,6 +24,7 @@ import com.towkirhs.handy.HandyApplication
 import com.towkirhs.handy.R
 import com.towkirhs.handy.access.FocusState
 import com.towkirhs.handy.access.HandyAccessibilityService
+import com.towkirhs.handy.data.JarvisBridge
 import com.towkirhs.handy.data.Prefs
 import com.towkirhs.handy.dictation.DictationController
 import com.towkirhs.handy.stt.Transcriber
@@ -32,13 +33,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 /**
  * Foreground service that owns the floating bar and runs dictation. The bar only shows while a text
- * field is focused (or while a dictation is in progress), and can be dragged anywhere.
+ * field is focused (or while a dictation is in progress), and can be dragged anywhere. An optional
+ * second "J" bubble is always on screen: what you say into it goes only to the Jarvis app.
  */
 class OverlayService : Service(), FlowBarView.Listener {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -49,6 +52,13 @@ class OverlayService : Service(), FlowBarView.Listener {
     private var attached = false
     private var centerX = 0
     private var centerY = 0
+    private var jarvisBar: FlowBarView? = null
+    private lateinit var jarvisParams: WindowManager.LayoutParams
+    private var jarvisX = 0
+    private var jarvisY = 0
+
+    /** Which bubble started the current dictation. */
+    private val toJarvis = MutableStateFlow(false)
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -98,20 +108,28 @@ class OverlayService : Service(), FlowBarView.Listener {
         wm.addView(bar, params)
         attached = true
 
+        if (Prefs.jarvisButton) addJarvisBar()
+
         scope.launch {
-            controller.state.collect { state ->
-                bar.mode = when (state) {
+            combine(controller.state, toJarvis) { state, jarvis -> state to jarvis }.collect { (state, jarvis) ->
+                val mode = when (state) {
                     DictationController.State.IDLE -> FlowBarView.Mode.IDLE
                     DictationController.State.LISTENING -> FlowBarView.Mode.LISTENING
                     DictationController.State.PROCESSING -> FlowBarView.Mode.PROCESSING
                 }
+                bar.mode = if (jarvis) FlowBarView.Mode.IDLE else mode
+                jarvisBar?.mode = if (jarvis) mode else FlowBarView.Mode.IDLE
                 applyPosition()
             }
         }
-        scope.launch { controller.level.collect { bar.pushLevel(it) } }
         scope.launch {
-            combine(FocusState.editable, controller.state) { typing, state ->
-                typing || state != DictationController.State.IDLE
+            controller.level.collect {
+                if (toJarvis.value) jarvisBar?.pushLevel(it) else bar.pushLevel(it)
+            }
+        }
+        scope.launch {
+            combine(FocusState.editable, controller.state, toJarvis) { typing, state, jarvis ->
+                typing || (state != DictationController.State.IDLE && !jarvis)
             }.distinctUntilChanged().collect { show ->
                 bar.visibility = if (show) View.VISIBLE else View.GONE
             }
@@ -144,6 +162,7 @@ class OverlayService : Service(), FlowBarView.Listener {
         scope.cancel()
         if (attached) {
             wm.removeView(bar)
+            jarvisBar?.let { wm.removeView(it) }
             attached = false
         }
         super.onDestroy()
@@ -156,16 +175,75 @@ class OverlayService : Service(), FlowBarView.Listener {
         params.x = (centerX - w / 2).coerceIn(0, maxOf(0, dm.widthPixels - w))
         params.y = (centerY - h / 2).coerceIn(0, maxOf(0, dm.heightPixels - h))
         if (attached) wm.updateViewLayout(bar, params)
+        val jb = jarvisBar ?: return
+        val jw = jb.widthFor(jb.mode)
+        jarvisParams.x = (jarvisX - jw / 2).coerceIn(0, maxOf(0, dm.widthPixels - jw))
+        jarvisParams.y = (jarvisY - h / 2).coerceIn(0, maxOf(0, dm.heightPixels - h))
+        if (attached) wm.updateViewLayout(jb, jarvisParams)
+    }
+
+    private fun addJarvisBar() {
+        val jb = FlowBarView(this, letter = "J").also { it.contentDescription = "Talk to Jarvis" }
+        jb.listener = object : FlowBarView.Listener {
+            override fun onStartRequested() {
+                if (!JarvisBridge.installed(this@OverlayService)) {
+                    toast("Install Jarvis first")
+                    return
+                }
+                toJarvis.value = true
+                if (!controller.start()) {
+                    toJarvis.value = false
+                    toast("Microphone unavailable. Check Handy's microphone permission.")
+                }
+            }
+            override fun onFinishRequested() = finishDictation()
+            override fun onCancelRequested() {
+                controller.cancel()
+                toJarvis.value = false
+            }
+            override fun onDrag(dx: Int, dy: Int) {
+                jarvisX += dx
+                jarvisY += dy
+                applyPosition()
+            }
+            override fun onDragEnd() {
+                Prefs.jarvisCenterX = jarvisX
+                Prefs.jarvisCenterY = jarvisY
+            }
+        }
+        jarvisParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        ).apply { gravity = Gravity.TOP or Gravity.START }
+        val dm = resources.displayMetrics
+        jarvisX = Prefs.jarvisCenterX.takeIf { it >= 0 }
+            ?: (dm.widthPixels - jb.widthFor(FlowBarView.Mode.IDLE) / 2 - (8 * dm.density).toInt())
+        jarvisY = Prefs.jarvisCenterY.takeIf { it >= 0 } ?: (dm.heightPixels * 0.45f).toInt()
+        wm.addView(jb, jarvisParams)
+        jarvisBar = jb
+        applyPosition()
     }
 
     override fun onStartRequested() {
+        toJarvis.value = false
         if (!controller.start()) toast("Microphone unavailable. Check Handy's microphone permission.")
     }
 
-    override fun onFinishRequested() {
+    override fun onFinishRequested() = finishDictation()
+
+    private fun finishDictation() {
         scope.launch {
-            when (val outcome = controller.finish()) {
-                is DictationController.Outcome.Text -> deliver(outcome.text)
+            val jarvis = toJarvis.value
+            val outcome = controller.finish(toJarvis = jarvis)
+            toJarvis.value = false
+            when (outcome) {
+                is DictationController.Outcome.Text -> if (jarvis) toast("Sent to Jarvis") else deliver(outcome.text)
                 DictationController.Outcome.NoSpeech -> toast("Didn't catch that")
                 is DictationController.Outcome.Failed -> toast(outcome.message)
             }
@@ -237,6 +315,13 @@ class OverlayService : Service(), FlowBarView.Listener {
                 Log.w(TAG, "Android would not start the bar from here", e)
                 false
             }
+        }
+
+        /** Restarts a running bar so a changed setting (like the Jarvis bubble) takes effect. */
+        fun restart(context: Context) {
+            if (!running) return
+            stop(context)
+            start(context)
         }
 
         fun stop(context: Context) {

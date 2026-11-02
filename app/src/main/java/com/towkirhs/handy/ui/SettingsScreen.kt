@@ -34,6 +34,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.towkirhs.handy.data.ModelDownloader
 import com.towkirhs.handy.data.Prefs
+import com.towkirhs.handy.overlay.OverlayService
 
 private const val GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
 private const val GEMINI_MODEL = "gemini-flash-latest"
@@ -43,6 +44,8 @@ fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val download by ModelDownloader.state.collectAsState()
     LaunchedEffect(Unit) { ModelDownloader.refresh(context) }
+    var jarvisOn by remember { mutableStateOf(Prefs.jarvisButton) }
+    var sendAll by remember { mutableStateOf(Prefs.sendAllToJarvis) }
     var llmOn by remember { mutableStateOf(Prefs.llmEnabled) }
     var baseUrl by remember { mutableStateOf(Prefs.llmBaseUrl) }
     var apiKey by remember { mutableStateOf(Prefs.llmApiKey) }
@@ -58,6 +61,35 @@ fun SettingsScreen(onBack: () -> Unit) {
     ) {
         TextButton(onClick = onBack) { Text("Back") }
         Text("Settings", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+
+        SoftCard {
+            Text("Jarvis", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Jarvis bubble: an always-on J bubble. What you say into it goes only to Jarvis.",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Switch(checked = jarvisOn, onCheckedChange = {
+                    jarvisOn = it
+                    Prefs.jarvisButton = it
+                    OverlayService.restart(context)
+                })
+            }
+            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Also send everything I dictate elsewhere (messages, notes) to Jarvis.",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Switch(checked = sendAll, onCheckedChange = {
+                    sendAll = it
+                    Prefs.sendAllToJarvis = it
+                })
+            }
+        }
 
         SoftCard {
             Row(verticalAlignment = Alignment.CenterVertically) {

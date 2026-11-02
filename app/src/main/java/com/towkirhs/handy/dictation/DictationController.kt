@@ -7,6 +7,8 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.towkirhs.handy.audio.Recorder
 import com.towkirhs.handy.data.History
+import com.towkirhs.handy.data.JarvisBridge
+import com.towkirhs.handy.data.Prefs
 import com.towkirhs.handy.stt.Transcriber
 import com.towkirhs.handy.text.GrammarFixer
 import com.towkirhs.handy.text.TextCleaner
@@ -55,7 +57,8 @@ class DictationController(private val context: Context, private val scope: Corou
         scope.launch { rec.stop() }
     }
 
-    suspend fun finish(): Outcome {
+    /** toJarvis: this dictation was spoken to Jarvis, so it always goes there. */
+    suspend fun finish(toJarvis: Boolean = false): Outcome {
         val rec = recorder ?: return Outcome.Failed("Not recording")
         recorder = null
         _state.value = State.PROCESSING
@@ -72,6 +75,7 @@ class DictationController(private val context: Context, private val scope: Corou
                 } else {
                     text = GrammarFixer.fix(context, text)
                     History.add(text)
+                    if (toJarvis || Prefs.sendAllToJarvis) JarvisBridge.send(context, text)
                     Outcome.Text(text)
                 }
             }

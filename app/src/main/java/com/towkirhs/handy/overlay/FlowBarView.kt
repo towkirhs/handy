@@ -22,7 +22,12 @@ import kotlin.math.sin
  *  - LISTENING: a pill with a live waveform, a cancel button on the left and a done button on the right.
  *  - PROCESSING: a pill with pulsing dots while the transcript is transcribed and polished.
  */
-class FlowBarView(context: Context, private val scale: Float = 1f) : View(context) {
+class FlowBarView(
+    context: Context,
+    private val scale: Float = 1f,
+    /** When set, the idle bubble shows this letter on the accent colour (used for the Jarvis bubble). */
+    private val letter: String? = null
+) : View(context) {
     enum class Mode { IDLE, LISTENING, PROCESSING }
 
     interface Listener {
@@ -102,7 +107,7 @@ class FlowBarView(context: Context, private val scale: Float = 1f) : View(contex
 
         stroke.strokeWidth = dp(1f)
         stroke.color = BORDER
-        fill.color = BACKGROUND
+        fill.color = if (letter != null && mode == Mode.IDLE) ACCENT else BACKGROUND
         fill.alpha = 255
         rect.set(dp(0.5f), dp(0.5f), w - dp(0.5f), h - dp(0.5f))
         canvas.drawRoundRect(rect, r, r, fill)
@@ -116,6 +121,15 @@ class FlowBarView(context: Context, private val scale: Float = 1f) : View(contex
     }
 
     private fun drawIdle(canvas: Canvas, w: Float, h: Float) {
+        if (letter != null) {
+            fill.color = WHITE
+            fill.alpha = 255
+            fill.textSize = dp(22f)
+            fill.textAlign = Paint.Align.CENTER
+            fill.isFakeBoldText = true
+            canvas.drawText(letter, w / 2f, h / 2f - (fill.ascent() + fill.descent()) / 2f, fill)
+            return
+        }
         val heights = floatArrayOf(8f, 14f, 20f, 14f, 8f)
         val barW = dp(3f)
         val gap = dp(3.5f)

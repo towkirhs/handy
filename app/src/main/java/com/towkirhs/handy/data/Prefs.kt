@@ -28,6 +28,25 @@ object Prefs {
         get() = prefs.getInt("bar_cy", -1)
         set(value) = prefs.edit { putInt("bar_cy", value) }
 
+    /** Show the always-on Jarvis bubble next to the dictation bar. */
+    var jarvisButton: Boolean
+        get() = prefs.getBoolean("jarvis_button", true)
+        set(value) = prefs.edit { putBoolean("jarvis_button", value) }
+
+    /** Also send every normal dictation (typed into other apps) to Jarvis. */
+    var sendAllToJarvis: Boolean
+        get() = prefs.getBoolean("send_all_to_jarvis", false)
+        set(value) = prefs.edit { putBoolean("send_all_to_jarvis", value) }
+
+    /** Centre of the Jarvis bubble in screen pixels; -1 means "use the default spot". */
+    var jarvisCenterX: Int
+        get() = prefs.getInt("jarvis_cx", -1)
+        set(value) = prefs.edit { putInt("jarvis_cx", value) }
+
+    var jarvisCenterY: Int
+        get() = prefs.getInt("jarvis_cy", -1)
+        set(value) = prefs.edit { putInt("jarvis_cy", value) }
+
     /** Grammar fixing on or off. The online key and the on-device model are both optional; this is the master switch. */
     var llmEnabled: Boolean
         get() = prefs.getBoolean("llm_enabled", true)

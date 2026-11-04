@@ -28,7 +28,8 @@ class FlowBarView(
     /** When set, the idle bubble shows this letter on the accent colour (used for the Jarvis bubble). */
     private val letter: String? = null
 ) : View(context) {
-    enum class Mode { IDLE, LISTENING, PROCESSING }
+    /** MENU is only used by the Jarvis bubble: voice, text or photo. */
+    enum class Mode { IDLE, LISTENING, PROCESSING, MENU }
 
     interface Listener {
         fun onStartRequested()
@@ -36,6 +37,10 @@ class FlowBarView(
         fun onCancelRequested()
         fun onDrag(dx: Int, dy: Int) {}
         fun onDragEnd() {}
+        /** Press and hold. Defaults to the same as a tap. */
+        fun onHoldStart() = onStartRequested()
+        /** A choice in the MENU mode: 0 voice, 1 text, 2 photo, -1 closed without choosing. */
+        fun onMenuPick(index: Int) {}
     }
 
     var listener: Listener? = null
@@ -73,6 +78,7 @@ class FlowBarView(
         Mode.IDLE -> dp(52f)
         Mode.LISTENING -> dp(224f)
         Mode.PROCESSING -> dp(132f)
+        Mode.MENU -> dp(168f)
     }.roundToInt()
 
     fun pushLevel(level: Float) {
@@ -117,6 +123,25 @@ class FlowBarView(
             Mode.IDLE -> drawIdle(canvas, w, h)
             Mode.LISTENING -> drawListening(canvas, w, h)
             Mode.PROCESSING -> drawProcessing(canvas, w, h)
+            Mode.MENU -> drawMenu(canvas, w, h)
+        }
+    }
+
+    private val menuLabels = arrayOf("\uD83C\uDFA4", "Aa", "\uD83D\uDCF7") // microphone, text, camera
+
+    private fun drawMenu(canvas: Canvas, w: Float, h: Float) {
+        val slot = w / 3f
+        val cy = h / 2f
+        for (i in 0 until 3) {
+            val cx = slot * i + slot / 2f
+            fill.color = if (i == 0) ACCENT else CIRCLE
+            fill.alpha = 255
+            canvas.drawCircle(cx, cy, h * 0.38f, fill)
+            fill.color = WHITE
+            fill.textSize = dp(17f)
+            fill.textAlign = Paint.Align.CENTER
+            fill.isFakeBoldText = i == 1
+            canvas.drawText(menuLabels[i], cx, cy - (fill.ascent() + fill.descent()) / 2f, fill)
         }
     }
 
@@ -216,12 +241,13 @@ class FlowBarView(
         if (!dragging && mode == Mode.IDLE) {
             pushToTalk = true
             performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-            listener?.onStartRequested()
+            listener?.onHoldStart()
         }
     }
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
         when (e.actionMasked) {
+            MotionEvent.ACTION_OUTSIDE -> if (mode == Mode.MENU) listener?.onMenuPick(-1)
             MotionEvent.ACTION_DOWN -> {
                 downX = e.x
                 downY = e.y
@@ -261,6 +287,10 @@ class FlowBarView(
                         performClick()
                         performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                         listener?.onStartRequested()
+                    }
+                    isUp && downMode == Mode.MENU && mode == Mode.MENU -> {
+                        performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        listener?.onMenuPick((downX / (width / 3f)).toInt().coerceIn(0, 2))
                     }
                     isUp && downMode == Mode.LISTENING && mode == Mode.LISTENING -> {
                         performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)

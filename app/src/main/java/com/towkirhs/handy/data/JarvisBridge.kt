@@ -16,6 +16,15 @@ object JarvisBridge {
         false
     }
 
+    /** Opens Jarvis's quick capture: [what] is "text" or "photo". */
+    fun openCapture(context: Context, what: String) {
+        val intent = Intent()
+            .setClassName(PACKAGE, "$PACKAGE.MainActivity")
+            .putExtra("jarvis_capture", what)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        context.startActivity(intent)
+    }
+
     /** Returns false if Jarvis isn't installed. */
     fun send(context: Context, text: String): Boolean {
         if (!installed(context)) return false

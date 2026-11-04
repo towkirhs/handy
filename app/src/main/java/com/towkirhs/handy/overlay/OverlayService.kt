@@ -189,17 +189,50 @@ class OverlayService : Service(), FlowBarView.Listener {
         if (attached) wm.updateViewLayout(jb, jarvisParams)
     }
 
+    private val closeMenu = Runnable {
+        jarvisBar?.let {
+            if (it.mode == FlowBarView.Mode.MENU) {
+                it.mode = FlowBarView.Mode.IDLE
+                applyPosition()
+            }
+        }
+    }
+
     private fun addJarvisBar() {
         val jb = FlowBarView(this, letter = "J").also {
             it.contentDescription = "Talk to Jarvis"
             it.visibility = View.GONE
         }
         jb.listener = object : FlowBarView.Listener {
+            // Tap opens the menu (voice, text, photo); press and hold talks straight away.
             override fun onStartRequested() {
                 if (!JarvisBridge.installed(this@OverlayService)) {
                     toast("Install Jarvis first")
                     return
                 }
+                jb.mode = FlowBarView.Mode.MENU
+                applyPosition()
+                jb.removeCallbacks(closeMenu)
+                jb.postDelayed(closeMenu, 6000)
+            }
+            override fun onMenuPick(index: Int) {
+                jb.removeCallbacks(closeMenu)
+                jb.mode = FlowBarView.Mode.IDLE
+                applyPosition()
+                when (index) {
+                    0 -> startJarvisVoice()
+                    1 -> JarvisBridge.openCapture(this@OverlayService, "text")
+                    2 -> JarvisBridge.openCapture(this@OverlayService, "photo")
+                }
+            }
+            override fun onHoldStart() {
+                if (!JarvisBridge.installed(this@OverlayService)) {
+                    toast("Install Jarvis first")
+                    return
+                }
+                startJarvisVoice()
+            }
+            private fun startJarvisVoice() {
                 toJarvis.value = true
                 if (!controller.start()) {
                     toJarvis.value = false
@@ -227,6 +260,7 @@ class OverlayService : Service(), FlowBarView.Listener {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT

@@ -70,13 +70,14 @@ class DictationController(private val context: Context, private val scope: Corou
             if (audio.samples.size < MIN_SAMPLES || audio.peak < SILENCE_PEAK) {
                 Outcome.NoSpeech
             } else {
-                val raw = (if (Prefs.sttGemini) GeminiStt.transcribe(audio.samples) else null)
-                    ?: Transcriber.transcribe(context, audio.samples, Vocab.hint())
+                val fromGemini = if (Prefs.sttGemini) GeminiStt.transcribe(audio.samples) else null
+                val raw = fromGemini ?: Transcriber.transcribe(context, audio.samples, Vocab.hint())
                 var text = Vocab.apply(TextCleaner.clean(raw))
                 if (text.isEmpty()) {
                     Outcome.NoSpeech
                 } else {
-                    text = GrammarFixer.fix(context, text)
+                    // Gemini's text is already clean, and Jarvis only needs the meaning: no second AI call then.
+                    if (fromGemini == null && !toJarvis) text = GrammarFixer.fix(context, text)
                     History.add(text)
                     if (toJarvis || Prefs.sendAllToJarvis) JarvisBridge.send(context, text)
                     Outcome.Text(text)

@@ -87,29 +87,37 @@ object Vocab {
     private fun tokens(s: String) = s.split(Regex("\\s+")).filter { it.isNotEmpty() }
     private fun bare(t: String) = t.trim { !it.isLetterOrDigit() }.lowercase()
 
-    /**
-     * Compares what was heard with what the person corrected it to, and learns each changed stretch
-     * of up to 4 words as a fix. Returns how many fixes were learned.
-     */
+    /** Learns every changed stretch between what was heard and the correction. Returns how many fixes were learned. */
     fun learnFromEdit(heard: String, meant: String): Int {
+        val found = diffFixes(heard, meant)
+        found.forEach { (h, m) -> addFix(h, m) }
+        return found.size
+    }
+
+    /**
+     * Compares what was heard with what the person corrected it to, and returns each changed stretch
+     * of up to 4 words as (heard, meant). Words are compared ignoring case and punctuation.
+     */
+    fun diffFixes(heard: String, meant: String): List<Pair<String, String>> {
         val a = tokens(heard)
         val b = tokens(meant)
         val n = a.size
         val m = b.size
-        // Longest common subsequence of the words (ignoring case and punctuation).
+        // Longest common subsequence of the words.
         val lcs = Array(n + 1) { IntArray(m + 1) }
         for (i in n - 1 downTo 0) for (j in m - 1 downTo 0) {
             lcs[i][j] = if (bare(a[i]) == bare(b[j])) lcs[i + 1][j + 1] + 1 else maxOf(lcs[i + 1][j], lcs[i][j + 1])
         }
         var i = 0
         var j = 0
-        var learned = 0
+        val out = mutableListOf<Pair<String, String>>()
         val gapA = mutableListOf<String>()
         val gapB = mutableListOf<String>()
         fun flush() {
             if (gapA.isNotEmpty() && gapB.isNotEmpty() && gapA.size <= 4 && gapB.size <= 4) {
-                addFix(gapA.joinToString(" ") { bare(it) }, gapB.joinToString(" ") { it.trim { c -> !c.isLetterOrDigit() } })
-                learned++
+                val h = gapA.joinToString(" ") { bare(it) }
+                val mm = gapB.joinToString(" ") { it.trim { c -> !c.isLetterOrDigit() } }
+                if (!h.equals(mm, ignoreCase = true)) out.add(h to mm)
             }
             gapA.clear()
             gapB.clear()
@@ -122,6 +130,6 @@ object Vocab {
             }
         }
         flush()
-        return learned
+        return out
     }
 }

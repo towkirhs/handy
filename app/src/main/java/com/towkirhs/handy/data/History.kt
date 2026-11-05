@@ -30,6 +30,13 @@ object History {
         save(list)
     }
 
+    /** Replaces an entry's text after the person corrected it. */
+    fun replace(entry: Entry, text: String) {
+        val list = _entries.value.map { if (it == entry) it.copy(text = text) else it }
+        _entries.value = list
+        save(list)
+    }
+
     fun clear() {
         _entries.value = emptyList()
         save(emptyList())

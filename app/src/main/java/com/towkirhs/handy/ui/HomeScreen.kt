@@ -1,6 +1,7 @@
 package com.towkirhs.handy.ui
 
 import android.text.format.DateUtils
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -32,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.towkirhs.handy.data.History
 import com.towkirhs.handy.data.Prefs
+import com.towkirhs.handy.data.Vocab
 import com.towkirhs.handy.overlay.OverlayService
 
 @Composable
@@ -39,6 +42,48 @@ fun HomeScreen(tick: Int, onOpenSettings: () -> Unit) {
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val entries by History.entries.collectAsState()
+    // A dictation being corrected: Handy learns from the difference.
+    var fixing by remember { mutableStateOf<History.Entry?>(null) }
+    var fixText by remember { mutableStateOf("") }
+    fixing?.let { entry ->
+        val ctx = LocalContext.current
+        val clip = LocalClipboardManager.current
+        AlertDialog(
+            onDismissRequest = { fixing = null },
+            title = { Text("Fix what Handy heard") },
+            text = {
+                Column {
+                    Text(
+                        "Correct the words. Handy remembers each fix for next time.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = fixText,
+                        onValueChange = { fixText = it },
+                        minLines = 3,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val learned = Vocab.learnFromEdit(entry.text, fixText)
+                    History.replace(entry, fixText)
+                    clip.setText(AnnotatedString(fixText))
+                    Toast.makeText(
+                        ctx,
+                        if (learned > 0) "Learned $learned fix${if (learned == 1) "" else "es"}. Copied." else "Saved and copied.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    fixing = null
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { fixing = null }) { Text("Cancel") } }
+        )
+    }
     var barOn by remember(tick) { mutableStateOf(OverlayService.running || Prefs.barEnabled) }
     var tryText by remember { mutableStateOf("") }
 
@@ -137,6 +182,7 @@ fun HomeScreen(tick: Int, onOpenSettings: () -> Unit) {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        TextButton(onClick = { fixing = entry; fixText = entry.text }) { Text("Fix") }
                         TextButton(onClick = { clipboard.setText(AnnotatedString(entry.text)) }) { Text("Copy") }
                     }
                 }

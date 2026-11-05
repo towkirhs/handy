@@ -9,6 +9,8 @@ import com.towkirhs.handy.audio.Recorder
 import com.towkirhs.handy.data.History
 import com.towkirhs.handy.data.JarvisBridge
 import com.towkirhs.handy.data.Prefs
+import com.towkirhs.handy.data.Vocab
+import com.towkirhs.handy.stt.GeminiStt
 import com.towkirhs.handy.stt.Transcriber
 import com.towkirhs.handy.text.GrammarFixer
 import com.towkirhs.handy.text.TextCleaner
@@ -68,8 +70,9 @@ class DictationController(private val context: Context, private val scope: Corou
             if (audio.samples.size < MIN_SAMPLES || audio.peak < SILENCE_PEAK) {
                 Outcome.NoSpeech
             } else {
-                val raw = Transcriber.transcribe(context, audio.samples)
-                var text = TextCleaner.clean(raw)
+                val raw = (if (Prefs.sttGemini) GeminiStt.transcribe(audio.samples) else null)
+                    ?: Transcriber.transcribe(context, audio.samples, Vocab.hint())
+                var text = Vocab.apply(TextCleaner.clean(raw))
                 if (text.isEmpty()) {
                     Outcome.NoSpeech
                 } else {

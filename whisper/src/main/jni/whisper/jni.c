@@ -163,7 +163,7 @@ Java_com_whispercpp_whisper_WhisperLib_00024Companion_freeContext(
 
 JNIEXPORT void JNICALL
 Java_com_whispercpp_whisper_WhisperLib_00024Companion_fullTranscribe(
-        JNIEnv *env, jobject thiz, jlong context_ptr, jint num_threads, jfloatArray audio_data) {
+        JNIEnv *env, jobject thiz, jlong context_ptr, jint num_threads, jfloatArray audio_data, jstring prompt) {
     UNUSED(thiz);
     struct whisper_context *context = (struct whisper_context *) context_ptr;
     jfloat *audio_data_arr = (*env)->GetFloatArrayElements(env, audio_data, NULL);
@@ -181,6 +181,9 @@ Java_com_whispercpp_whisper_WhisperLib_00024Companion_fullTranscribe(
     params.offset_ms = 0;
     params.no_context = true;
     params.single_segment = false;
+    // Words the speaker uses, so Whisper expects them.
+    const char *prompt_chars = prompt != NULL ? (*env)->GetStringUTFChars(env, prompt, NULL) : NULL;
+    if (prompt_chars != NULL && prompt_chars[0] != '\0') params.initial_prompt = prompt_chars;
 
     whisper_reset_timings(context);
 
@@ -191,6 +194,7 @@ Java_com_whispercpp_whisper_WhisperLib_00024Companion_fullTranscribe(
         whisper_print_timings(context);
     }
     (*env)->ReleaseFloatArrayElements(env, audio_data, audio_data_arr, JNI_ABORT);
+    if (prompt_chars != NULL) (*env)->ReleaseStringUTFChars(env, prompt, prompt_chars);
 }
 
 JNIEXPORT jint JNICALL

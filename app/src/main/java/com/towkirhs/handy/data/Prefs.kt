@@ -28,6 +28,23 @@ object Prefs {
         get() = prefs.getInt("bar_cy", -1)
         set(value) = prefs.edit { putInt("bar_cy", value) }
 
+    const val DEFAULT_STT_MODEL = "gemini-3.8-flash"
+
+    /** Recognise speech with Gemini when online (falls back to the on-device model). */
+    var sttGemini: Boolean
+        get() = prefs.getBoolean("stt_gemini", false)
+        set(value) = prefs.edit { putBoolean("stt_gemini", value) }
+
+    /** Gemini key for speech. Falls back to the grammar key when that one is a Gemini key. */
+    var geminiKey: String
+        get() = prefs.getString("gemini_key", null)
+            ?: if (llmBaseUrl.contains("generativelanguage")) llmApiKey else ""
+        set(value) = prefs.edit { putString("gemini_key", value) }
+
+    var sttModel: String
+        get() = prefs.getString("stt_model", DEFAULT_STT_MODEL) ?: DEFAULT_STT_MODEL
+        set(value) = prefs.edit { putString("stt_model", value) }
+
     /** Show the Jarvis bubble next to the dictation bar. */
     var jarvisButton: Boolean
         get() = prefs.getBoolean("jarvis_button", true)

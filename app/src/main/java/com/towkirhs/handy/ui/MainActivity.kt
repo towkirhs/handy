@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { HOME, SETTINGS }
+private enum class Screen { HOME, SETTINGS, WORDS }
 
 @Composable
 private fun HandyRoot() {
@@ -51,9 +51,13 @@ private fun HandyRoot() {
     when {
         !ready -> SetupScreen(tick = tick, onChanged = { tick++ })
         screen == Screen.HOME -> HomeScreen(tick = tick, onOpenSettings = { screen = Screen.SETTINGS })
+        screen == Screen.WORDS -> {
+            BackHandler { screen = Screen.SETTINGS }
+            WordsScreen(onBack = { screen = Screen.SETTINGS })
+        }
         else -> {
             BackHandler { screen = Screen.HOME }
-            SettingsScreen(onBack = { screen = Screen.HOME })
+            SettingsScreen(onBack = { screen = Screen.HOME }, onOpenWords = { screen = Screen.WORDS })
         }
     }
 }

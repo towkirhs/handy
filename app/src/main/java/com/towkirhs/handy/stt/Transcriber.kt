@@ -24,6 +24,7 @@ object Transcriber {
         mutex.withLock { context(app) }
     }
 
-    suspend fun transcribe(app: Context, samples: FloatArray): String =
-        mutex.withLock { context(app).transcribeData(samples, printTimestamp = false) }
+    /** [prompt] lists words the speaker uses, so Whisper expects them. */
+    suspend fun transcribe(app: Context, samples: FloatArray, prompt: String = ""): String =
+        mutex.withLock { context(app).transcribeData(samples, printTimestamp = false, prompt = prompt) }
 }

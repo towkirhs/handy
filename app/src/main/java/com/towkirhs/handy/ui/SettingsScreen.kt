@@ -40,10 +40,13 @@ private const val GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta
 private const val GEMINI_MODEL = "gemini-flash-latest"
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onOpenWords: () -> Unit) {
     val context = LocalContext.current
     val download by ModelDownloader.state.collectAsState()
     LaunchedEffect(Unit) { ModelDownloader.refresh(context) }
+    var sttGemini by remember { mutableStateOf(Prefs.sttGemini) }
+    var geminiKey by remember { mutableStateOf(Prefs.geminiKey) }
+    var sttModel by remember { mutableStateOf(Prefs.sttModel) }
     var jarvisOn by remember { mutableStateOf(Prefs.jarvisButton) }
     var sendAll by remember { mutableStateOf(Prefs.sendAllToJarvis) }
     var llmOn by remember { mutableStateOf(Prefs.llmEnabled) }
@@ -61,6 +64,45 @@ fun SettingsScreen(onBack: () -> Unit) {
     ) {
         TextButton(onClick = onBack) { Text("Back") }
         Text("Settings", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+
+        SoftCard {
+            Text("Speech recognition", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Use Gemini when online. Much better with Banglish and accents. Sends the recording to " +
+                        "Google and uses your free Gemini quota. Offline it falls back to the on-phone model.",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Switch(checked = sttGemini, onCheckedChange = {
+                    sttGemini = it
+                    Prefs.sttGemini = it
+                })
+            }
+            if (sttGemini) {
+                OutlinedTextField(
+                    value = geminiKey,
+                    onValueChange = { geminiKey = it; Prefs.geminiKey = it },
+                    label = { Text("Gemini API key") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                )
+                OutlinedTextField(
+                    value = sttModel,
+                    onValueChange = { sttModel = it; Prefs.sttModel = it },
+                    label = { Text("Model") },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                )
+            }
+            OutlinedButton(onClick = onOpenWords, modifier = Modifier.padding(top = 8.dp)) { Text("My words and fixes") }
+        }
 
         SoftCard {
             Text("Jarvis", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
